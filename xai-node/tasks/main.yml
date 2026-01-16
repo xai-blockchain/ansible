@@ -5,7 +5,7 @@
   ansible.builtin.user:
     name: "{{ daemon_user }}"
     shell: /bin/bash
-    create_home: yes
+    create_home: true
     state: present
 
 - name: Install Python and dependencies
@@ -36,10 +36,10 @@
   ansible.builtin.command:
     cmd: "python3 -m venv {{ venv_path }}"
     creates: "{{ venv_path }}/bin/python"
-  become: yes
+  become: true
   become_user: "{{ daemon_user }}"
 
-- name: Upgrade pip in virtual environment
+- name: Upgrade pip in virtual environment  # noqa: package-latest
   ansible.builtin.pip:
     name:
       - pip
@@ -47,7 +47,7 @@
       - setuptools
     state: latest
     virtualenv: "{{ venv_path }}"
-  become: yes
+  become: true
   become_user: "{{ daemon_user }}"
 
 - name: Install XAI package
@@ -56,10 +56,10 @@
     state: present
     virtualenv: "{{ venv_path }}"
     extra_args: "--upgrade"
-  become: yes
+  become: true
   become_user: "{{ daemon_user }}"
   when: xai_package is defined
-  notify: restart xai service
+  notify: Restart xai service
 
 - name: Configure XAI node
   ansible.builtin.template:
@@ -68,7 +68,7 @@
     owner: "{{ daemon_user }}"
     group: "{{ daemon_user }}"
     mode: '0644'
-  notify: restart xai service
+  notify: Restart xai service
 
 - name: Create systemd service
   ansible.builtin.template:
@@ -78,8 +78,8 @@
     group: root
     mode: '0644'
   notify:
-    - reload systemd
-    - restart xai service
+    - Reload systemd
+    - Restart xai service
 
 - name: Allow P2P port through UFW
   community.general.ufw:
@@ -98,14 +98,14 @@
   ansible.builtin.service:
     name: "{{ service_name }}"
     state: started
-    enabled: yes
+    enabled: true
 
 - name: Wait for node to start
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ rpc_port }}/status"
-    return_content: yes
+    return_content: true
   register: node_status
   until: node_status.status == 200
   retries: 30
   delay: 10
-  ignore_errors: yes
+  ignore_errors: true

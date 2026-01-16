@@ -15,7 +15,9 @@ offline: true
 exclude_paths:
   - .cache/
   - playbooks/  # Legacy playbooks, may not meet current standards
-  - support_migrate_node.yml  # Uses templated hosts ({{ source_host }}, {{ target_host }}) - validate with: ansible-playbook --syntax-check -e source_host=x -e target_host=y
+  # support_migrate_node.yml uses templated hosts ({{ source_host }}, {{ target_host }})
+  # Validate with: ansible-playbook --syntax-check -e source_host=x -e target_host=y
+  - support_migrate_node.yml
 
 # Mock roles/collections that aren't installed
 mock_roles:

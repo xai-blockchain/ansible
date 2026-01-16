@@ -1,11 +1,11 @@
 ---
 # Handlers for xai-node role
 
-- name: reload systemd
+- name: Reload systemd
   ansible.builtin.systemd:
-    daemon_reload: yes
+    daemon_reload: true
 
-- name: restart xai service
+- name: Restart xai service
   ansible.builtin.service:
     name: "{{ service_name }}"
     state: restarted
