@@ -14,11 +14,12 @@
   gather_facts: true
 
   vars:
-    snapshot_dir: "{{ snapshot_dir | default('/home/' + daemon_user + '/xai-snapshots') }}"
-    enable_cron: "{{ enable_cron | default(true) }}"
-    upload_to_r2: "{{ upload_to_r2 | default(false) }}"
-    snapshot_retention: "{{ snapshot_retention | default(3) }}"
-    artifacts_bucket: "{{ artifacts_bucket | default('xai-testnet-artifacts') }}"
+    # Defaults - override with -e snapshot_dir=/path etc.
+    snapshot_dir: "/home/{{ daemon_user }}/xai-snapshots"
+    enable_cron: true
+    upload_to_r2: false
+    snapshot_retention: 3
+    artifacts_bucket: "xai-testnet-artifacts"
 
   tasks:
     - name: Create snapshot directory
