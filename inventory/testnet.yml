@@ -1,6 +1,11 @@
 ---
 all:
   children:
+    nodes:
+      children:
+        primary_nodes:
+        primary_sentries:
+        secondary_nodes:
     primary_nodes:
       hosts:
         xai_node1:
