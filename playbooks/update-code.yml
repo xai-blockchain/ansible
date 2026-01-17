@@ -29,40 +29,7 @@
 
   handlers:
     - name: rollback deployment
-      listen: rollback deployment
-      block:
-        - name: Stop failed node
-          ansible.builtin.service:
-            name: "{{ service_name }}"
-            state: stopped
-          ignore_errors: yes
-
-        - name: Restore code from backup
-          ansible.builtin.shell: |
-            if [ -d "{{ backup_dir }}/{{ node_name }}-latest" ]; then
-              rm -rf {{ xai_home }}
-              cp -a {{ backup_dir }}/{{ node_name }}-latest {{ xai_home }}
-              echo "Restored from backup"
-            else
-              echo "No backup found - manual intervention required"
-              exit 1
-            fi
-          become_user: "{{ daemon_user }}"
-          register: restore_result
-
-        - name: Start node with restored code
-          ansible.builtin.service:
-            name: "{{ service_name }}"
-            state: started
-
-        - name: Verify rollback success
-          ansible.builtin.uri:
-            url: "http://127.0.0.1:{{ rpc_port }}/stats"
-            return_content: yes
-          register: rollback_status
-          until: rollback_status.status == 200
-          retries: 10
-          delay: 5
+      ansible.builtin.include_tasks: rollback.yml
 
   pre_tasks:
     - name: Display deployment info
