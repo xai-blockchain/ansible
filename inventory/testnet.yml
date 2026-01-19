@@ -1,4 +1,30 @@
 ---
+# =============================================================================
+# XAI Testnet Inventory
+# =============================================================================
+# Topology: [Val1, Val2] → Sentry1 ←→ Sentry2 ← [Val3, Val4]
+#
+# CRITICAL RULES:
+# - Validators ONLY peer with their LOCAL sentry (never remote nodes)
+# - Sentries peer with local validators AND remote sentry
+# - This creates network isolation where validators are protected
+#
+# =============================================================================
+# PORT ALLOCATION (via Port Sentinel - scripts/port_sentinel.py)
+# =============================================================================
+# All ports in this inventory are allocated via Port Sentinel to prevent
+# conflicts across AURA, PAW, and XAI testnets on shared infrastructure.
+#
+# To verify allocations: python scripts/port_sentinel.py verify
+# To audit this file:    python scripts/port_sentinel.py audit infra/ansible/inventory/
+#
+# XAI Testnet Port Ranges:
+#   - RPC:  12545-12571
+#   - P2P:  12333-12372
+#   - WS:   12765-12768
+#   - Metrics: 12000-12003
+# =============================================================================
+
 all:
   children:
     nodes:
@@ -6,41 +32,45 @@ all:
         primary_nodes:
         primary_sentries:
         secondary_nodes:
+        secondary_sentries:
+
+    # =========================================================================
+    # Server A: xai-testnet (10.10.0.3 / 54.39.129.11)
+    # =========================================================================
     primary_nodes:
       hosts:
-        xai_node1:
-          ansible_host: 54.39.129.11
-          node_name: node1
-          node_type: node
-          daemon_home: /home/ubuntu/xai-mvp/node1
+        xai_val1:
+          ansible_host: 10.10.0.3
+          node_name: val1
+          node_type: validator
+          daemon_home: /home/ubuntu/xai-mvp/val1
           rpc_port: 12545
           p2p_port: 12333
           mining: true
-          service_name: xai-mvp-node1
-          miner_address: xaitest1gxt2dhojrmqqolmvrdpln7b4avwy5bfm
+          service_name: xai-mvp-val1
+          miner_address: xaitest1hb2oxkzmrn65xeait2ydn22g4acy4gfa
+          # Validators ONLY peer with their LOCAL sentry
           peers:
-            - "http://127.0.0.1:12555"
-            - "http://10.10.0.4:12546"
-            - "http://10.10.0.4:12556"
-        xai_node2:
-          ansible_host: 54.39.129.11
-          node_name: node2
-          node_type: node
-          daemon_home: /home/ubuntu/xai-mvp/node2
+            - "http://127.0.0.1:12570"  # sentry1 (local)
+
+        xai_val2:
+          ansible_host: 10.10.0.3
+          node_name: val2
+          node_type: validator
+          daemon_home: /home/ubuntu/xai-mvp/val2
           rpc_port: 12555
           p2p_port: 12334
           mining: true
-          service_name: xai-mvp-node2
-          miner_address: xaitest1gxt2dhojrmqqolmvrdpln7b4avwy5bfm
+          service_name: xai-mvp-val2
+          miner_address: xaitest1gxao7ddera7knxsf6clllimtyxx7tyqm
+          # Validators ONLY peer with their LOCAL sentry
           peers:
-            - "http://127.0.0.1:12545"
-            - "http://10.10.0.4:12546"
-            - "http://10.10.0.4:12556"
+            - "http://127.0.0.1:12570"  # sentry1 (local)
 
     primary_sentries:
       hosts:
         xai_sentry1:
-          ansible_host: 54.39.129.11
+          ansible_host: 10.10.0.3
           node_name: sentry1
           node_type: sentry
           daemon_home: /home/ubuntu/xai-mvp/sentry1
@@ -48,11 +78,49 @@ all:
           p2p_port: 12371
           mining: false
           service_name: xai-sentry1
+          # Sentry peers with LOCAL validators AND REMOTE sentry
           peers:
-            - "http://127.0.0.1:12545"
-            - "http://127.0.0.1:12555"
+            - "http://127.0.0.1:12545"  # val1 (local)
+            - "http://127.0.0.1:12555"  # val2 (local)
+            - "http://10.10.0.4:12571"  # sentry2 (remote - Server B)
+
+    # =========================================================================
+    # Server B: services-testnet (10.10.0.4 / 139.99.149.160)
+    # =========================================================================
+    secondary_nodes:
+      hosts:
+        xai_val3:
+          ansible_host: 10.10.0.4
+          node_name: val3
+          node_type: validator
+          daemon_home: /home/ubuntu/xai-mvp/val3
+          rpc_port: 12546
+          p2p_port: 12335
+          mining: true
+          service_name: xai-mvp-val3
+          miner_address: xaitest1p4vvb6cdeah5mezechskwmz2yr3f42vc
+          # Validators ONLY peer with their LOCAL sentry
+          peers:
+            - "http://127.0.0.1:12571"  # sentry2 (local)
+
+        xai_val4:
+          ansible_host: 10.10.0.4
+          node_name: val4
+          node_type: validator
+          daemon_home: /home/ubuntu/xai-mvp/val4
+          rpc_port: 12556
+          p2p_port: 12336
+          mining: true
+          service_name: xai-mvp-val4
+          miner_address: xaitest1v3ho3mipmwudn6dhjb43m5shw5zslwjy
+          # Validators ONLY peer with their LOCAL sentry
+          peers:
+            - "http://127.0.0.1:12571"  # sentry2 (local)
+
+    secondary_sentries:
+      hosts:
         xai_sentry2:
-          ansible_host: 54.39.129.11
+          ansible_host: 10.10.0.4
           node_name: sentry2
           node_type: sentry
           daemon_home: /home/ubuntu/xai-mvp/sentry2
@@ -60,38 +128,11 @@ all:
           p2p_port: 12372
           mining: false
           service_name: xai-sentry2
+          # Sentry peers with LOCAL validators AND REMOTE sentry
           peers:
-            - "http://127.0.0.1:12545"
-            - "http://127.0.0.1:12555"
-
-    secondary_nodes:
-      hosts:
-        xai_node3:
-          ansible_host: 139.99.149.160
-          node_name: node3
-          node_type: validator
-          daemon_home: /home/ubuntu/xai-mvp/node3
-          rpc_port: 12546
-          p2p_port: 12335
-          mining: false
-          service_name: xai-mvp-node3
-          peers:
-            - "http://10.10.0.3:12545"
-            - "http://10.10.0.3:12555"
-            - "http://127.0.0.1:12556"
-        xai_node4:
-          ansible_host: 139.99.149.160
-          node_name: node4
-          node_type: validator
-          daemon_home: /home/ubuntu/xai-mvp/node4
-          rpc_port: 12556
-          p2p_port: 12336
-          mining: false
-          service_name: xai-mvp-node4
-          peers:
-            - "http://10.10.0.3:12545"
-            - "http://10.10.0.3:12555"
-            - "http://127.0.0.1:12546"
+            - "http://127.0.0.1:12546"  # val3 (local)
+            - "http://127.0.0.1:12556"  # val4 (local)
+            - "http://10.10.0.3:12570"  # sentry1 (remote - Server A)
 
   vars:
     ansible_user: ubuntu
@@ -101,9 +142,9 @@ all:
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
     chain_id: xai-mvp-testnet-1
     daemon_user: ubuntu
-    venv_path: /home/ubuntu/xai/venv
-    xai_src: /home/ubuntu/xai
-    xai_home: /home/ubuntu/xai
+    venv_path: /home/ubuntu/xai-mvp/venv
+    xai_src: /home/ubuntu/xai-mvp/xai-source
+    xai_home: /home/ubuntu/xai-mvp
     xai_mvp_home: /home/ubuntu/xai-mvp
     vpn_network: 10.10.0.0/24
     ufw_enabled: false
