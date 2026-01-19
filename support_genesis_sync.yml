@@ -7,7 +7,7 @@
 # WARNING: This can take a very long time depending on chain height!
 #
 # Usage:
-#   ansible-playbook -i inventory/testnet.yml playbooks/genesis-sync.yml --limit xai_node1
+#   ansible-playbook -i inventory/testnet.yml playbooks/genesis-sync.yml --limit xai_val1
 #
 # Variables:
 #   backup_existing: Whether to backup existing data (default: true)

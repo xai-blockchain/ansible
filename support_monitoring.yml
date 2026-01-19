@@ -5,7 +5,7 @@
 #
 # Usage:
 #   ansible-playbook -i inventory/testnet.yml support_monitoring.yml
-#   ansible-playbook -i inventory/testnet.yml support_monitoring.yml --limit xai_node1
+#   ansible-playbook -i inventory/testnet.yml support_monitoring.yml --limit xai_val1
 
 - name: XAI Monitoring Stack
   hosts: all

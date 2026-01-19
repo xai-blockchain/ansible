@@ -5,8 +5,8 @@
 # Includes cron job for daily automated snapshots.
 #
 # Usage:
-#   ansible-playbook -i inventory/testnet.yml support_snapshot.yml --limit xai_node1
-#   ansible-playbook -i inventory/testnet.yml support_snapshot.yml --limit xai_node1 -e upload_to_r2=true
+#   ansible-playbook -i inventory/testnet.yml support_snapshot.yml --limit xai_val1
+#   ansible-playbook -i inventory/testnet.yml support_snapshot.yml --limit xai_val1 -e upload_to_r2=true
 
 - name: XAI Snapshot Creation
   hosts: all

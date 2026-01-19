@@ -6,18 +6,18 @@
 #
 # Usage:
 #   # Remove node with confirmation prompt
-#   ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_node1
+#   ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_val1
 #
 #   # Skip confirmation (for automation)
-#   ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_val1 \
 #     -e confirm_removal=yes
 #
 #   # Archive data instead of delete
-#   ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_val1 \
 #     -e archive_data=true -e confirm_removal=yes
 #
 #   # Keep keys (remove everything else)
-#   ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_val1 \
 #     -e preserve_keys=true -e confirm_removal=yes
 #
 # What Gets Removed:

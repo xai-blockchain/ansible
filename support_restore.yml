@@ -3,8 +3,8 @@
 #
 # Downloads and restores a snapshot from R2 artifacts.
 # Usage:
-#   ansible-playbook -i inventory/testnet.yml playbooks/snapshot-restore.yml --limit xai_node1
-#   ansible-playbook -i inventory/testnet.yml playbooks/snapshot-restore.yml --limit xai_node1 -e snapshot_url=https://...
+#   ansible-playbook -i inventory/testnet.yml playbooks/snapshot-restore.yml --limit xai_val1
+#   ansible-playbook -i inventory/testnet.yml playbooks/snapshot-restore.yml --limit xai_val1 -e snapshot_url=https://...
 #
 # Variables:
 #   snapshot_url: Optional specific snapshot URL (default: latest from R2)

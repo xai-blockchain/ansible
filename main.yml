@@ -5,7 +5,7 @@
 #
 # Usage:
 #   ansible-playbook -i inventory/testnet.yml main.yml
-#   ansible-playbook -i inventory/testnet.yml main.yml --limit xai_node1
+#   ansible-playbook -i inventory/testnet.yml main.yml --limit xai_val1
 #   ansible-playbook -i inventory/testnet.yml main.yml --tags xai_node
 
 - name: XAI Node Deployment

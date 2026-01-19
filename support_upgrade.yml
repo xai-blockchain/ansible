@@ -5,7 +5,7 @@
 # and rollback capability. Standard blockchain community upgrade pattern.
 #
 # Usage:
-#   ansible-playbook -i inventory/testnet.yml support_upgrade.yml --limit xai_node1
+#   ansible-playbook -i inventory/testnet.yml support_upgrade.yml --limit xai_val1
 #   ansible-playbook -i inventory/testnet.yml support_upgrade.yml -e xai_version=1.2.0
 #   ansible-playbook -i inventory/testnet.yml support_upgrade.yml -e upgrade_mode=rolling
 #

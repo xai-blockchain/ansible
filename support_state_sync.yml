@@ -8,7 +8,7 @@
 # snapshot restore under the hood but with simpler semantics.
 #
 # Usage:
-#   ansible-playbook -i inventory/testnet.yml playbooks/state-sync.yml --limit xai_node1
+#   ansible-playbook -i inventory/testnet.yml playbooks/state-sync.yml --limit xai_val1
 #
 # Variables:
 #   sync_from_peers: Try to sync from peer nodes first (default: false)

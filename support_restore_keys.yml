@@ -6,16 +6,16 @@
 #
 # Usage:
 #   # Restore from backup file
-#   ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_val1 \
 #     -e backup_file=/path/to/backup.tar.gz.gpg
 #
 #   # Restore with password provided
-#   ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_val1 \
 #     -e backup_file=/path/to/backup.tar.gz.gpg \
 #     -e backup_password=YOUR_PASSWORD
 #
 #   # Restore without stopping the node (for key pre-staging)
-#   ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_val1 \
 #     -e backup_file=/path/to/backup.tar.gz.gpg \
 #     -e stop_node=false
 #

@@ -4,7 +4,7 @@
 #
 # Usage:
 #   All nodes:    ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml
-#   Single node:  ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml --limit xai_node1
+#   Single node:  ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml --limit xai_val1
 #   Skip backup:  ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml -e skip_backup=true
 
 - name: Update XAI code with rolling deployment
@@ -207,16 +207,16 @@
     # ============================================================
     # PHASE 7: Sync verification - ensure node catches up
     # ============================================================
-    - name: "Sync check: Get network height from another node"
+    - name: "Sync check: Get network height from sentry1"
       ansible.builtin.uri:
-        url: "http://127.0.0.1:12570/stats"  # Sentry 1 as reference
+        url: "http://{{ hostvars['xai_sentry1'].ansible_host }}:{{ hostvars['xai_sentry1'].rpc_port }}/stats"
         return_content: yes
         timeout: 30
       register: network_status
       failed_when: false
-      delegate_to: "{{ groups['primary_nodes'][0] }}"
+      delegate_to: "{{ groups['primary_sentries'][0] }}"
       run_once: false
-      when: ansible_host != '54.39.129.11' or rpc_port != 12570
+      when: inventory_hostname != 'xai_sentry1'
 
     - name: "Sync check: Use current node height if reference unavailable"
       ansible.builtin.set_fact:

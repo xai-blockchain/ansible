@@ -6,18 +6,18 @@
 #
 # Usage:
 #   # Install resync script and cron (weekly Sunday 3am)
-#   ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_node1
+#   ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_val1
 #
 #   # Custom schedule (daily at 4am)
-#   ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_val1 \
 #     -e resync_hour=4 -e resync_weekday='*'
 #
 #   # Immediate resync (run now, don't install cron)
-#   ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_val1 \
 #     -e run_now=true -e install_cron=false
 #
 #   # Install with Slack notifications
-#   ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_val1 \
 #     -e slack_webhook=https://hooks.slack.com/...
 #
 # Features:

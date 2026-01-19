@@ -6,14 +6,14 @@
 #
 # Usage:
 #   # Backup to default location (/tmp/xai-keys-backup-{date}/)
-#   ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_node1
+#   ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_val1
 #
 #   # Backup to custom location
-#   ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_val1 \
 #     -e backup_dest=/secure/backups
 #
 #   # Backup with custom encryption password (prompted if not set)
-#   ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_node1 \
+#   ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_val1 \
 #     -e backup_password=YOUR_SECURE_PASSWORD
 #
 # Security Notes:

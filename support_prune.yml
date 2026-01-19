@@ -5,7 +5,7 @@
 # Standard blockchain community pattern for node maintenance.
 #
 # Usage:
-#   ansible-playbook -i inventory/testnet.yml support_prune.yml --limit xai_node1
+#   ansible-playbook -i inventory/testnet.yml support_prune.yml --limit xai_val1
 #   ansible-playbook -i inventory/testnet.yml support_prune.yml -e prune_mode=aggressive
 #   ansible-playbook -i inventory/testnet.yml support_prune.yml -e dry_run=true
 #

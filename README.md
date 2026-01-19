@@ -25,7 +25,7 @@ ansible-playbook -i inventory/testnet.yml setup.yml
 ansible-playbook -i inventory/testnet.yml main.yml
 
 # Fast sync a stalled node
-ansible-playbook -i inventory/testnet.yml support_state_sync.yml --limit xai_node1
+ansible-playbook -i inventory/testnet.yml support_state_sync.yml --limit xai_val1
 
 # Check node health
 ansible-playbook -i inventory/testnet.yml playbooks/health-check.yml
@@ -53,20 +53,22 @@ ansible-playbook -i inventory/testnet.yml playbooks/health-check.yml
             ┌─────────────┴─────────────┐
             │     VALIDATOR NODES       │
             │   (Private, Protected)    │
-            │  node1-4 (mining/voting)  │
+            │  val1-4 (mining/voting)   │
             └───────────────────────────┘
 ```
 
 ### Node Configuration
 
+Topology: `[Val1, Val2] → Sentry1 ←→ Sentry2 ← [Val3, Val4]`
+
 | Node | Server | Type | RPC | P2P | Service | Mining |
 |------|--------|------|-----|-----|---------|--------|
-| node1 | xai-testnet (10.10.0.3) | node | 12545 | 12333 | xai-mvp-node1 | Yes |
-| node2 | xai-testnet (10.10.0.3) | node | 12555 | 12334 | xai-mvp-node2 | Yes |
+| val1 | xai-testnet (10.10.0.3) | validator | 12545 | 12333 | xai-mvp-val1 | Yes |
+| val2 | xai-testnet (10.10.0.3) | validator | 12555 | 12334 | xai-mvp-val2 | Yes |
 | sentry1 | xai-testnet (10.10.0.3) | sentry | 12570 | 12371 | xai-sentry1 | No |
-| sentry2 | xai-testnet (10.10.0.3) | sentry | 12571 | 12372 | xai-sentry2 | No |
-| node3 | services-testnet (10.10.0.4) | validator | 12546 | 12335 | xai-mvp-node3 | No |
-| node4 | services-testnet (10.10.0.4) | validator | 12556 | 12336 | xai-mvp-node4 | No |
+| val3 | services-testnet (10.10.0.4) | validator | 12546 | 12335 | xai-mvp-val3 | Yes |
+| val4 | services-testnet (10.10.0.4) | validator | 12556 | 12336 | xai-mvp-val4 | Yes |
+| sentry2 | services-testnet (10.10.0.4) | sentry | 12571 | 12372 | xai-sentry2 | No |
 
 ## Playbooks
 
@@ -81,12 +83,12 @@ ansible-playbook -i inventory/testnet.yml playbooks/health-check.yml
 
 | Playbook | Purpose | Usage |
 |----------|---------|-------|
-| `support_state_sync.yml` | Fast sync using snapshots | `... support_state_sync.yml --limit xai_node1` |
-| `support_restore.yml` | Restore from R2 snapshot | `... support_restore.yml --limit xai_node1` |
+| `support_state_sync.yml` | Fast sync using snapshots | `... support_state_sync.yml --limit xai_val1` |
+| `support_restore.yml` | Restore from R2 snapshot | `... support_restore.yml --limit xai_val1` |
 | `support_genesis_sync.yml` | Full sync from genesis | `... support_genesis_sync.yml -e confirm_genesis_sync=yes` |
-| `support_snapshot.yml` | Create snapshots + cron | `... support_snapshot.yml --limit xai_node1` |
+| `support_snapshot.yml` | Create snapshots + cron | `... support_snapshot.yml --limit xai_val1` |
 | `support_monitoring.yml` | Deploy metrics exporters | `... support_monitoring.yml` |
-| `support_resync.yml` | Scheduled automatic recovery | `... support_resync.yml --limit xai_node1` |
+| `support_resync.yml` | Scheduled automatic recovery | `... support_resync.yml --limit xai_val1` |
 
 ### Node Lifecycle Management
 
@@ -94,10 +96,10 @@ These playbooks follow blockchain community standards for key management and nod
 
 | Playbook | Purpose | Usage |
 |----------|---------|-------|
-| `support_backup_keys.yml` | Encrypted key backup (GPG AES-256) | `... support_backup_keys.yml --limit xai_node1` |
-| `support_restore_keys.yml` | Restore keys from encrypted backup | `... support_restore_keys.yml --limit xai_node1 -e backup_file=/path/to/backup.gpg` |
-| `support_remove_node.yml` | Complete node removal with cleanup | `... support_remove_node.yml --limit xai_node1 -e confirm_removal=yes` |
-| `support_migrate_node.yml` | Multi-phase node migration | `... support_migrate_node.yml -e source_host=xai_node1 -e target_host=xai_node5` |
+| `support_backup_keys.yml` | Encrypted key backup (GPG AES-256) | `... support_backup_keys.yml --limit xai_val1` |
+| `support_restore_keys.yml` | Restore keys from encrypted backup | `... support_restore_keys.yml --limit xai_val1 -e backup_file=/path/to/backup.gpg` |
+| `support_remove_node.yml` | Complete node removal with cleanup | `... support_remove_node.yml --limit xai_val1 -e confirm_removal=yes` |
+| `support_migrate_node.yml` | Multi-phase node migration | `... support_migrate_node.yml -e source_host=xai_val1 -e target_host=xai_val5` |
 
 ### Legacy Playbooks (in playbooks/)
 
@@ -193,7 +195,7 @@ ansible-playbook -i inventory/testnet.yml main.yml --limit 'primary_nodes:primar
 ansible-playbook -i inventory/testnet.yml main.yml --limit secondary_nodes
 
 # Single node
-ansible-playbook -i inventory/testnet.yml main.yml --limit xai_node1
+ansible-playbook -i inventory/testnet.yml main.yml --limit xai_val1
 
 # Sentries only
 ansible-playbook -i inventory/testnet.yml main.yml --limit 'xai_sentry1:xai_sentry2'
@@ -205,50 +207,50 @@ ansible-playbook -i inventory/testnet.yml main.yml --limit 'xai_sentry1:xai_sent
 
 ```bash
 # 1. Setup server (first time only)
-ansible-playbook -i inventory/testnet.yml setup.yml --limit xai_node1
+ansible-playbook -i inventory/testnet.yml setup.yml --limit xai_val1
 
 # 2. Deploy node
-ansible-playbook -i inventory/testnet.yml main.yml --limit xai_node1
+ansible-playbook -i inventory/testnet.yml main.yml --limit xai_val1
 
 # 3. Fast sync from snapshot
-ansible-playbook -i inventory/testnet.yml support_state_sync.yml --limit xai_node1
+ansible-playbook -i inventory/testnet.yml support_state_sync.yml --limit xai_val1
 ```
 
 ### Recover Stalled Node
 
 ```bash
 # Check current status
-ansible-playbook -i inventory/testnet.yml playbooks/health-check.yml --limit xai_node1
+ansible-playbook -i inventory/testnet.yml playbooks/health-check.yml --limit xai_val1
 
 # Force state sync
-ansible-playbook -i inventory/testnet.yml support_state_sync.yml --limit xai_node1 -e force_snapshot=true
+ansible-playbook -i inventory/testnet.yml support_state_sync.yml --limit xai_val1 -e force_snapshot=true
 ```
 
 ### Create Snapshot
 
 ```bash
 # One-time snapshot
-ansible-playbook -i inventory/testnet.yml support_snapshot.yml --limit xai_node1
+ansible-playbook -i inventory/testnet.yml support_snapshot.yml --limit xai_val1
 
 # Setup daily cron
-ansible-playbook -i inventory/testnet.yml support_snapshot.yml --limit xai_node1 -e enable_cron=true
+ansible-playbook -i inventory/testnet.yml support_snapshot.yml --limit xai_val1 -e enable_cron=true
 ```
 
 ### Full Genesis Sync (Archive Node)
 
 ```bash
 # WARNING: Takes a long time!
-ansible-playbook -i inventory/testnet.yml support_genesis_sync.yml --limit xai_node1 -e confirm_genesis_sync=yes
+ansible-playbook -i inventory/testnet.yml support_genesis_sync.yml --limit xai_val1 -e confirm_genesis_sync=yes
 ```
 
 ### Backup Node Keys
 
 ```bash
 # Backup with password prompt (encrypted GPG AES-256)
-ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_node1
+ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_val1
 
 # Backup to custom location
-ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_node1 \
+ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_val1 \
   -e backup_dest=/secure/backups
 ```
 
@@ -256,11 +258,11 @@ ansible-playbook -i inventory/testnet.yml support_backup_keys.yml --limit xai_no
 
 ```bash
 # Restore from encrypted backup
-ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_node1 \
+ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_val1 \
   -e backup_file=/path/to/backup.tar.gz.gpg
 
 # Restore without starting node (for pre-staging)
-ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_node1 \
+ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_val1 \
   -e backup_file=/path/to/backup.tar.gz.gpg -e start_node=false
 ```
 
@@ -268,14 +270,14 @@ ansible-playbook -i inventory/testnet.yml support_restore_keys.yml --limit xai_n
 
 ```bash
 # Remove with confirmation prompt
-ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_node1
+ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_val1
 
 # Remove with archival (preserve data)
-ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_node1 \
+ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_val1 \
   -e archive_data=true -e confirm_removal=yes
 
 # Remove but keep keys
-ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_node1 \
+ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_val1 \
   -e preserve_keys=true -e confirm_removal=yes
 ```
 
@@ -284,25 +286,25 @@ ansible-playbook -i inventory/testnet.yml support_remove_node.yml --limit xai_no
 ```bash
 # Full migration (backup → stop → sync → restore → verify)
 ansible-playbook -i inventory/testnet.yml support_migrate_node.yml \
-  -e source_host=xai_node1 -e target_host=xai_node5
+  -e source_host=xai_val1 -e target_host=xai_val5
 
 # Migration without removing source (for testing)
 ansible-playbook -i inventory/testnet.yml support_migrate_node.yml \
-  -e source_host=xai_node1 -e target_host=xai_node5 -e cleanup_source=false
+  -e source_host=xai_val1 -e target_host=xai_val5 -e cleanup_source=false
 ```
 
 ### Scheduled Automatic Recovery
 
 ```bash
 # Install weekly resync cron (Sunday 3am)
-ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_node1
+ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_val1
 
 # Custom schedule with Slack notifications
-ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_node1 \
+ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_val1 \
   -e resync_hour=4 -e resync_weekday='*' -e slack_webhook=https://hooks.slack.com/...
 
 # Immediate resync (run now)
-ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_node1 \
+ansible-playbook -i inventory/testnet.yml support_resync.yml --limit xai_val1 \
   -e run_now=true -e install_cron=false
 ```
 
@@ -317,13 +319,13 @@ ssh services-testnet   # Secondary server (139.99.149.160)
 
 ```bash
 # Check status
-sudo systemctl status xai-mvp-node1
+sudo systemctl status xai-mvp-val1
 
 # Restart node
-sudo systemctl restart xai-mvp-node1
+sudo systemctl restart xai-mvp-val1
 
 # View logs
-journalctl -u xai-mvp-node1 -f --no-hostname
+journalctl -u xai-mvp-val1 -f --no-hostname
 
 # Quick health check
 curl -s http://127.0.0.1:12545/stats | jq '{height:.chain_height,peers:.peer_count}'
