@@ -2,10 +2,20 @@
 # Update XAI code on nodes with rolling deployment
 # Features: Serial execution, pre/post health checks, sync verification, rollback on failure
 #
+# SINGLE SOURCE OF TRUTH: This playbook is the authoritative deployment logic for XAI.
+# CI/CD workflows MUST use this playbook - never duplicate deployment logic elsewhere.
+#
 # Usage:
-#   All nodes:    ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml
-#   Single node:  ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml --limit xai_val1
-#   Skip backup:  ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml -e skip_backup=true
+#   Manual (git):    ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml
+#   CI/CD (tarball): ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml \
+#                      -e "deploy_package=/path/to/xai-source.tar.gz" \
+#                      -e "deploy_version=abc123"
+#   Single node:     ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml --limit xai_val1
+#   Skip backup:     ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml -e skip_backup=true
+#
+# Deployment Modes:
+#   - If deploy_package is defined: Extract from tarball (CI/CD mode)
+#   - If deploy_package is undefined: Pull from git repository (manual mode)
 
 - name: Update XAI code with rolling deployment
   hosts: nodes
@@ -27,6 +37,14 @@
     # Service name pattern (matches systemd units)
     service_name: "xai-mvp-{{ node_name }}"
 
+    # Deployment mode detection
+    # CI/CD sets deploy_package; manual runs use git
+    use_tarball_deploy: "{{ deploy_package is defined and deploy_package | length > 0 }}"
+
+    # Git configuration (for manual deployments)
+    git_repo: "https://github.com/xai-blockchain/xai.git"
+    git_branch: "main"
+
   handlers:
     - name: rollback deployment
       ansible.builtin.include_tasks: rollback.yml
@@ -39,6 +57,8 @@
           Server: {{ ansible_host }}
           RPC Port: {{ rpc_port }}
           Service: {{ service_name }}
+          Deployment mode: {{ 'CI/CD (tarball)' if (use_tarball_deploy | bool) else 'Manual (git)' }}
+          {% if use_tarball_deploy | bool %}Version: {{ deploy_version | default('unknown') }}{% else %}Branch: {{ git_branch }}{% endif %}
 
   tasks:
     # ============================================================
@@ -133,20 +153,90 @@
     # ============================================================
     # PHASE 4: Deploy new code
     # ============================================================
-    - name: Pull latest code from repository
-      ansible.builtin.git:
-        repo: "https://github.com/xai-blockchain/xai.git"
+
+    # --- CI/CD MODE: Deploy from tarball ---
+    - name: "Deploy (tarball): Display deployment mode"
+      ansible.builtin.debug:
+        msg: |
+          DEPLOYMENT MODE: Tarball (CI/CD)
+          Package: {{ deploy_package }}
+          Version: {{ deploy_version | default('unknown') }}
+      when: use_tarball_deploy | bool
+
+    - name: "Deploy (tarball): Copy package to server"
+      ansible.builtin.copy:
+        src: "{{ deploy_package }}"
+        dest: "/tmp/xai-deploy-package.tar.gz"
+        mode: '0644'
+      when: use_tarball_deploy | bool
+      notify: "rollback deployment"
+
+    - name: "Deploy (tarball): Clear existing code directory"
+      ansible.builtin.file:
+        path: "{{ xai_home }}/src"
+        state: absent
+      become_user: "{{ daemon_user }}"
+      when: use_tarball_deploy | bool
+
+    - name: "Deploy (tarball): Ensure xai_home exists"
+      ansible.builtin.file:
+        path: "{{ xai_home }}"
+        state: directory
+        owner: "{{ daemon_user }}"
+        mode: '0755'
+      when: use_tarball_deploy | bool
+
+    - name: "Deploy (tarball): Extract package"
+      ansible.builtin.unarchive:
+        src: "/tmp/xai-deploy-package.tar.gz"
         dest: "{{ xai_home }}"
-        version: main
+        remote_src: yes
+        owner: "{{ daemon_user }}"
+        group: "{{ daemon_user }}"
+      become_user: "{{ daemon_user }}"
+      when: use_tarball_deploy | bool
+      register: tarball_result
+      notify: "rollback deployment"
+
+    - name: "Deploy (tarball): Clean up temporary package"
+      ansible.builtin.file:
+        path: "/tmp/xai-deploy-package.tar.gz"
+        state: absent
+      when: use_tarball_deploy | bool
+
+    - name: "Deploy (tarball): Record deployment info"
+      ansible.builtin.set_fact:
+        git_result:
+          before: "tarball-deploy"
+          after: "{{ deploy_version | default('unknown') }}"
+          changed: true
+      when: use_tarball_deploy | bool
+
+    # --- MANUAL MODE: Deploy from git ---
+    - name: "Deploy (git): Display deployment mode"
+      ansible.builtin.debug:
+        msg: |
+          DEPLOYMENT MODE: Git (manual)
+          Repository: {{ git_repo }}
+          Branch: {{ git_branch }}
+      when: not (use_tarball_deploy | bool)
+
+    - name: "Deploy (git): Pull latest code from repository"
+      ansible.builtin.git:
+        repo: "{{ git_repo }}"
+        dest: "{{ xai_home }}"
+        version: "{{ git_branch }}"
         force: yes
       become_user: "{{ daemon_user }}"
       register: git_result
+      when: not (use_tarball_deploy | bool)
       notify: "rollback deployment"
 
-    - name: Display git update info
+    # --- Common: Display update info ---
+    - name: Display code update info
       ansible.builtin.debug:
         msg: |
-          Git update result:
+          Code update result:
           - Before: {{ git_result.before | default('N/A') }}
           - After: {{ git_result.after | default('N/A') }}
           - Changed: {{ git_result.changed }}
@@ -277,12 +367,13 @@
           ====================================================
           SUCCESS: {{ node_name }} updated successfully!
           ====================================================
+          Deployment mode: {{ 'CI/CD (tarball)' if (use_tarball_deploy | bool) else 'Manual (git)' }}
+          Version/Commit: {{ git_result.after | default('N/A') }}
           Initial height: {{ initial_height }}
           Final height: {{ final_height }}
           Height change: +{{ (final_height | int) - (initial_height | int) }}
           Peers: {{ progress_check_2.json.peer_count | default('N/A') }}
           Mining: {{ progress_check_2.json.mining | default('N/A') }}
-          Git commit: {{ git_result.after | default('N/A') }}
           ====================================================
           Proceeding to next node...
           ====================================================

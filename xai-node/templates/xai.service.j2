@@ -29,6 +29,13 @@ Environment="XAI_MINING_HEARTBEAT_SECONDS=30"
 Environment="XAI_FAST_MINING=1"
 Environment="XAI_MAX_TEST_MINING_DIFFICULTY=4"
 
+# P2P WAN Timeout Settings (tuned for cross-continent latency ~200ms RTT)
+Environment="XAI_P2P_HTTP_TIMEOUT_SECONDS=10"
+Environment="XAI_P2P_HANDSHAKE_TIMEOUT_SECONDS=30"
+Environment="XAI_P2P_QUIC_DIAL_TIMEOUT=5.0"
+Environment="XAI_P2P_PING_TIMEOUT_SECONDS=30"
+Environment="XAI_P2P_CLOSE_TIMEOUT_SECONDS=15"
+
 # Logging
 StandardOutput=journal
 StandardError=journal
