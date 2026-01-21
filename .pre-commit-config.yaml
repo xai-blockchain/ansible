@@ -1,0 +1,51 @@
+# Pre-commit hooks for xai-ansible
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ['--unsafe']  # Allow custom tags in ansible
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.33.0
+    hooks:
+      - id: yamllint
+        args: ['-d', '{extends: relaxed, rules: {line-length: {max: 150}, truthy: disable}}']
+
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v24.2.0
+    hooks:
+      - id: ansible-lint
+        additional_dependencies:
+          - ansible-core==2.16.3
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+
+  # Local hooks for XAI-specific validation
+  - repo: local
+    hooks:
+      - id: check-env-var-consistency
+        name: Check environment variable consistency
+        entry: scripts/check-env-consistency.sh
+        language: script
+        files: \.(yml|yaml|j2)$
+        pass_filenames: false
+
+exclude: |
+  (?x)^(
+    \.git/|
+    venv/|
+    __pycache__/
+  )$

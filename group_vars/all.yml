@@ -110,8 +110,6 @@ faucet_port: 12081
 websocket_port: 8766
 websocket_metrics_port: 8767
 graphql_port: 8083
-prometheus_port: 9090
-grafana_port: 3000
 
 # =============================================================================
 # Monitoring Ports

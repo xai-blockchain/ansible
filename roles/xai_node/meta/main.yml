@@ -1,14 +1,12 @@
 ---
 galaxy_info:
   author: Blockchain Ops
-  description: XAI Python-based blockchain node deployment
+  description: XAI node deployment and configuration
   license: Apache-2.0
   min_ansible_version: "2.14"
   platforms:
     - name: Ubuntu
       versions:
-        - jammy
-        - noble
+        - all
 
-dependencies:
-  - role: common
+dependencies: []

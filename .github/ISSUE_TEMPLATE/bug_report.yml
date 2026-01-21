@@ -1,0 +1,14 @@
+name: Bug Report
+description: Report an issue with playbooks
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true
+  - type: input
+    id: playbook
+    attributes:
+      label: Affected Playbook

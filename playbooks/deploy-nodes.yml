@@ -10,7 +10,7 @@
   become: yes
   roles:
     - common
-    - role: xai-node
+    - role: xai_node
       tags: [node]
     - role: monitoring
       tags: [monitoring]
