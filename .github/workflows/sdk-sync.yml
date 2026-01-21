@@ -13,7 +13,7 @@ jobs:
     outputs:
       api_changed: ${{ steps.detect.outputs.changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -34,7 +34,7 @@ jobs:
       matrix:
         sdk: [python, typescript, react-native]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check SDK needs update
         id: check
