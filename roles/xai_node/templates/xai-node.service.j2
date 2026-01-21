@@ -35,13 +35,16 @@ Environment=XAI_ALLOW_EMPTY_MINING=true
 Environment=XAI_FINALITY_ENABLED=true
 Environment=XAI_FAST_MINING=1
 
-# P2P WAN Timeout Settings (tuned for cross-continent latency ~200ms RTT)
-# Without these, nodes across geographic regions will experience orphan blocks
-Environment=XAI_P2P_HTTP_TIMEOUT_SECONDS=10
-Environment=XAI_P2P_HANDSHAKE_TIMEOUT_SECONDS=30
-Environment=XAI_P2P_QUIC_DIAL_TIMEOUT=5.0
-Environment=XAI_P2P_PING_TIMEOUT_SECONDS=30
-Environment=XAI_P2P_CLOSE_TIMEOUT_SECONDS=15
+# P2P WAN Timeout Settings (tuned for ~200ms RTT OVH links; safer defaults)
+# Longer timeouts reduce false disconnects/orphans across DCs.
+Environment=XAI_P2P_HTTP_TIMEOUT_SECONDS=20
+Environment=XAI_P2P_HANDSHAKE_TIMEOUT_SECONDS=45
+Environment=XAI_P2P_QUIC_DIAL_TIMEOUT=8.0
+Environment=XAI_P2P_PING_TIMEOUT_SECONDS=40
+Environment=XAI_P2P_CLOSE_TIMEOUT_SECONDS=20
+
+# Block time (external testnet stability over speed)
+Environment=XAI_BLOCK_TIME_TARGET=30
 
 # Main process
 ExecStart={{ venv_path }}/bin/python -m xai.core.node \
