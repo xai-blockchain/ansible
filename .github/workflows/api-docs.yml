@@ -1,0 +1,147 @@
+name: API Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.py'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  generate-docs:
+    name: Generate API Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install sphinx sphinx-rtd-theme sphinx-autodoc-typehints myst-parser
+
+      - name: Check for Sphinx config
+        id: sphinx-check
+        run: |
+          if [ -f "docs/conf.py" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Sphinx config if needed
+        if: steps.sphinx-check.outputs.exists == 'false'
+        run: |
+          mkdir -p docs
+          cat > docs/conf.py << 'EOF'
+          # Configuration file for Sphinx documentation builder.
+          project = 'XAI Blockchain'
+          copyright = '2026, XAI Blockchain Team'
+          author = 'XAI Blockchain Team'
+
+          extensions = [
+              'sphinx.ext.autodoc',
+              'sphinx.ext.napoleon',
+              'sphinx.ext.viewcode',
+              'sphinx.ext.intersphinx',
+              'sphinx_autodoc_typehints',
+              'myst_parser',
+          ]
+
+          templates_path = ['_templates']
+          exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+          html_theme = 'sphinx_rtd_theme'
+          html_static_path = ['_static']
+
+          autodoc_default_options = {
+              'members': True,
+              'member-order': 'bysource',
+              'special-members': '__init__',
+              'undoc-members': True,
+              'exclude-members': '__weakref__'
+          }
+
+          intersphinx_mapping = {
+              'python': ('https://docs.python.org/3', None),
+          }
+          EOF
+
+          cat > docs/index.rst << 'EOF'
+          XAI Blockchain Documentation
+          ============================
+
+          .. toctree::
+             :maxdepth: 2
+             :caption: Contents:
+
+             api/modules
+
+          Indices and tables
+          ==================
+
+          * :ref:`genindex`
+          * :ref:`modindex`
+          * :ref:`search`
+          EOF
+
+          cat > docs/Makefile << 'EOF'
+          SPHINXOPTS    ?=
+          SPHINXBUILD   ?= sphinx-build
+          SOURCEDIR     = .
+          BUILDDIR      = _build
+
+          help:
+          	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+          .PHONY: help Makefile
+
+          %: Makefile
+          	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+          EOF
+
+      - name: Generate API docs
+        run: |
+          cd docs
+          sphinx-apidoc -f -o api ../src/xai --separate
+          make html || echo "Sphinx build completed with warnings"
+
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: docs/_build/html
+          retention-days: 30
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build/html
+        if: github.ref == 'refs/heads/main'
+
+  deploy-docs:
+    name: Deploy API Docs
+    runs-on: ubuntu-latest
+    needs: generate-docs
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages-api
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true  # Don't fail if Pages not configured

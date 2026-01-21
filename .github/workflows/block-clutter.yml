@@ -1,0 +1,128 @@
+name: Block Clutter Files
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+  push:
+    branches: [main, master, develop]
+
+jobs:
+  check-forbidden-files:
+    name: Check for forbidden files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for AI-generated clutter files
+        run: |
+          echo "Checking for forbidden file patterns..."
+
+          FORBIDDEN_PATTERNS=(
+            "*_SUMMARY*.md"
+            "*_SUMMARY*.txt"
+            "*_REPORT*.md"
+            "*_REPORT*.txt"
+            "*IMPLEMENTATION*.md"
+            "*IMPLEMENTATION*.txt"
+            "*EXECUTIVE*.md"
+            "*EXECUTIVE*.txt"
+            "*COMPLETE*.md"
+            "*COMPLETE*.txt"
+            "*FINDINGS*.md"
+            "*FINDINGS*.txt"
+            "*ANALYSIS*.md"
+            "*ANALYSIS*.txt"
+            "*/lcov-report/*"
+            "*/coverage/*.html"
+            "jscpd-report.json"
+            "crypto_report.json"
+            "coverage-report.txt"
+          )
+
+          # Allowed exceptions (legitimate files that match patterns)
+          ALLOWED_FILES=(
+            ".github/ISSUE_TEMPLATE/bug_report.md"
+            ".github/ISSUE_TEMPLATE/bug_report.yml"
+            "CONTRIBUTING.md"
+            "docs/CONTRIBUTING.md"
+          )
+
+          FOUND_FILES=""
+
+          for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
+            # Find files matching pattern
+            while IFS= read -r file; do
+              [[ -z "$file" ]] && continue
+
+              # Check if file is in allowed list
+              ALLOWED=false
+              for allowed in "${ALLOWED_FILES[@]}"; do
+                if [[ "$file" == "$allowed" ]]; then
+                  ALLOWED=true
+                  break
+                fi
+              done
+
+              # Skip node_modules, vendor, .git
+              if [[ "$file" == *"node_modules/"* ]] || \
+                 [[ "$file" == *"vendor/"* ]] || \
+                 [[ "$file" == *".git/"* ]]; then
+                continue
+              fi
+
+              if [[ "$ALLOWED" == "false" ]]; then
+                FOUND_FILES="$FOUND_FILES\n  - $file"
+              fi
+            done < <(find . -type f -name "$pattern" 2>/dev/null | sed 's|^\./||')
+          done
+
+          if [[ -n "$FOUND_FILES" ]]; then
+            echo ""
+            echo "❌ BLOCKED: Found forbidden files that should not be committed:"
+            echo -e "$FOUND_FILES"
+            echo ""
+            echo "These files are typically AI-generated and should not be in the repository."
+            echo "Please remove them before pushing."
+            echo ""
+            echo "If this is a false positive, add the file to ALLOWED_FILES in this workflow."
+            exit 1
+          fi
+
+          echo "✅ No forbidden files found"
+
+      - name: Check changed files in PR
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Checking files changed in this PR..."
+
+          FORBIDDEN_PATTERNS="SUMMARY|REPORT|IMPLEMENTATION|EXECUTIVE|COMPLETE|FINDINGS|ANALYSIS|lcov-report|coverage-report"
+
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null || echo "")
+
+          BLOCKED_FILES=""
+          for file in $CHANGED_FILES; do
+            # Skip allowed patterns
+            if [[ "$file" == ".github/"* ]] || \
+               [[ "$file" == "CONTRIBUTING.md" ]]; then
+              continue
+            fi
+
+            if echo "$file" | grep -qE "$FORBIDDEN_PATTERNS"; then
+              BLOCKED_FILES="$BLOCKED_FILES\n  - $file"
+            fi
+          done
+
+          if [[ -n "$BLOCKED_FILES" ]]; then
+            echo ""
+            echo "❌ BLOCKED: PR contains forbidden file changes:"
+            echo -e "$BLOCKED_FILES"
+            echo ""
+            echo "These files should not be added to the repository."
+            exit 1
+          fi
+
+          echo "✅ PR changes look clean"

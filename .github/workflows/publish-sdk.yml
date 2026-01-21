@@ -1,0 +1,206 @@
+name: Publish SDK to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (without v prefix, e.g., 1.0.0)'
+        required: false
+        type: string
+      target:
+        description: 'Publish target'
+        required: true
+        type: choice
+        options:
+          - testpypi
+          - pypi
+          - both
+        default: testpypi
+
+jobs:
+  build:
+    name: Build SDK Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        working-directory: sdk/python
+        run: python -m build
+
+      - name: Check package
+        working-directory: sdk/python
+        run: twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-dist
+          path: sdk/python/dist/
+          retention-days: 5
+
+  test-install:
+    name: Test Installation (Python ${{ matrix.python-version }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sdk-dist
+          path: dist/
+
+      - name: Install from wheel
+        run: |
+          pip install dist/*.whl
+
+      - name: Test imports
+        run: |
+          python -c "from xai_blockchain_sdk import XAIClient; print('XAIClient OK')"
+          python -c "from xai_blockchain_sdk import Wallet, Balance, Transaction, Block; print('Models OK')"
+          python -c "from xai_blockchain_sdk import XAIError, NetworkError, ValidationError; print('Exceptions OK')"
+          python -c "import xai_blockchain_sdk; print(f'Version: {xai_blockchain_sdk.__version__}')"
+
+      - name: Test basic client creation
+        run: |
+          python -c "
+          from xai_blockchain_sdk import XAIClient
+          client = XAIClient(base_url='https://testnet-rpc.xaiblockchain.com')
+          print(f'Client created: {client}')
+          print(f'Has blockchain: {hasattr(client, \"blockchain\")}')
+          print(f'Has wallet: {hasattr(client, \"wallet\")}')
+          print(f'Has governance: {hasattr(client, \"governance\")}')
+          print(f'Has ai: {hasattr(client, \"ai\")}')
+          "
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: [build, test-install]
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.target == 'testpypi' || github.event.inputs.target == 'both')
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/xai-blockchain-sdk
+    permissions:
+      id-token: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sdk-dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          verbose: true
+          attestations: false
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [build, test-install]
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.target == 'pypi' || github.event.inputs.target == 'both'))
+    environment:
+      name: pypi
+      url: https://pypi.org/p/xai-blockchain-sdk
+    permissions:
+      id-token: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sdk-dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  verify-testpypi:
+    name: Verify TestPyPI Installation
+    needs: publish-testpypi
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.target == 'testpypi' || github.event.inputs.target == 'both')
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Wait for package availability
+        run: sleep 30
+
+      - name: Install from TestPyPI
+        run: |
+          pip install --index-url https://test.pypi.org/simple/ \
+            --extra-index-url https://pypi.org/simple/ \
+            xai-blockchain-sdk
+
+      - name: Verify installation
+        run: |
+          python -c "
+          from xai_blockchain_sdk import XAIClient, __version__
+          print(f'Successfully installed xai-blockchain-sdk v{__version__}')
+          client = XAIClient(base_url='https://testnet-rpc.xaiblockchain.com')
+          stats = client.blockchain.get_stats()
+          print(f'Connected to testnet! Chain height: {stats.chain_height}')
+          "
+
+  verify-pypi:
+    name: Verify PyPI Installation
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.target == 'pypi' || github.event.inputs.target == 'both'))
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Wait for package availability
+        run: sleep 30
+
+      - name: Install from PyPI
+        run: pip install xai-blockchain-sdk
+
+      - name: Verify installation
+        run: |
+          python -c "
+          from xai_blockchain_sdk import XAIClient, __version__
+          print(f'Successfully installed xai-blockchain-sdk v{__version__}')
+          client = XAIClient(base_url='https://testnet-rpc.xaiblockchain.com')
+          stats = client.blockchain.get_stats()
+          print(f'Connected to testnet! Chain height: {stats.chain_height}')
+          "

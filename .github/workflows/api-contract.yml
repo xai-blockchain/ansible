@@ -1,0 +1,60 @@
+name: API Contract Validation
+
+on:
+  push:
+    paths:
+      - 'docs/api/openapi.yaml'
+      - 'src/xai/api/**'
+  pull_request:
+    paths:
+      - 'docs/api/openapi.yaml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tools
+        run: |
+          npm install -g @stoplight/spectral-cli
+          npm install -g openapi-diff
+
+      - name: Validate OpenAPI spec
+        run: spectral lint docs/api/openapi.yaml
+
+      - name: Check for breaking changes
+        run: |
+          git show origin/main:docs/api/openapi.yaml > old-spec.yaml 2>/dev/null || exit 0
+          openapi-diff old-spec.yaml docs/api/openapi.yaml --fail-on-incompatible
+
+  property-based:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install schemathesis pytest
+
+      - name: Start XAI node
+        run: |
+          pip install -e .
+          python -m xai.core.node --testnet &
+          sleep 30
+
+      - name: Run property-based API tests
+        run: |
+          schemathesis run docs/api/openapi.yaml \
+            --base-url http://localhost:8545 \
+            --checks all \
+            --hypothesis-max-examples 100

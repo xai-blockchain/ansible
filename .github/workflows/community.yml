@@ -1,0 +1,190 @@
+name: Community Automation
+
+on:
+  issues:
+    types: [opened, labeled]
+  pull_request:
+    types: [opened, ready_for_review]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  auto-label:
+    name: Auto-Label Issues
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = (issue.body || '').toLowerCase();
+            const labels = [];
+
+            // Type detection
+            if (title.includes('bug') || body.includes('bug')) labels.push('bug');
+            if (title.includes('feature') || title.includes('enhancement')) labels.push('enhancement');
+            if (title.includes('doc') || body.includes('documentation')) labels.push('documentation');
+            if (title.includes('question') || body.includes('how do i')) labels.push('question');
+
+            // Module detection
+            if (body.includes('compute') || body.includes('ai task')) labels.push('module:compute');
+            if (body.includes('consensus') || body.includes('bft') || body.includes('finality')) labels.push('module:consensus');
+            if (body.includes('p2p') || body.includes('network') || body.includes('peer')) labels.push('module:network');
+            if (body.includes('utxo') || body.includes('transaction') || body.includes('blockchain')) labels.push('module:blockchain');
+            if (body.includes('wallet') || body.includes('key')) labels.push('module:wallet');
+            if (body.includes('api') || body.includes('rpc') || body.includes('graphql')) labels.push('module:api');
+            if (body.includes('explorer') || body.includes('faucet')) labels.push('module:services');
+
+            // Priority hints
+            if (body.includes('crash') || body.includes('critical') || body.includes('urgent')) labels.push('priority:high');
+            if (body.includes('security') || body.includes('vulnerability')) labels.push('security');
+
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labels
+              });
+            }
+
+  welcome-contributor:
+    name: Welcome New Contributors
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'opened'
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const creator = context.payload.pull_request.user.login;
+
+            // Check if this is their first PR
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              creator: creator
+            });
+
+            if (prs.length === 1) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: `Welcome @${creator}! Thanks for contributing to XAI Blockchain.
+
+            **Before we can merge your PR, please ensure:**
+
+            - [ ] All CI checks pass (lint, test, security)
+            - [ ] Commits are DCO signed (\`git commit -s\`)
+            - [ ] Tests cover new functionality
+            - [ ] Type hints are included for new code
+            - [ ] Documentation is updated if needed
+
+            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) for full guidelines.
+
+            **Quick DCO fix if needed:**
+            \`\`\`bash
+            git commit --amend -s
+            git push --force-with-lease
+            \`\`\`
+
+            Thanks for helping build decentralized AI compute!`
+              });
+
+              // Add first-contribution label
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                labels: ['first-contribution']
+              });
+            }
+
+  auto-assign:
+    name: Auto-Assign Reviewers
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'ready_for_review'
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const files = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+
+            const labels = [];
+            let needsSecurityReview = false;
+
+            for (const file of files.data) {
+              const path = file.filename.toLowerCase();
+
+              // Detect areas changed
+              if (path.includes('consensus') || path.includes('crypto')) {
+                labels.push('needs:consensus-review');
+                needsSecurityReview = true;
+              }
+              if (path.includes('network') || path.includes('p2p')) {
+                labels.push('needs:network-review');
+              }
+              if (path.includes('blockchain') || path.includes('utxo')) {
+                labels.push('needs:blockchain-review');
+              }
+              if (path.includes('security') || path.includes('auth')) {
+                needsSecurityReview = true;
+              }
+            }
+
+            if (needsSecurityReview) {
+              labels.push('needs:security-review');
+            }
+
+            // Add unique labels
+            const uniqueLabels = [...new Set(labels)];
+            if (uniqueLabels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: uniqueLabels
+              });
+            }
+
+  good-first-issue:
+    name: Tag Good First Issues
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'labeled'
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const label = context.payload.label;
+
+            // If labeled as 'good first issue', add helpful comment
+            if (label.name === 'good first issue') {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `This issue has been marked as a **good first issue** for new contributors!
+
+            **Getting Started:**
+            1. Fork the repository
+            2. Clone: \`git clone https://github.com/YOUR_USERNAME/xai.git\`
+            3. Setup: \`python -m venv venv && source venv/bin/activate && pip install -e ".[dev]"\`
+            4. Create branch: \`git checkout -b fix/issue-${issue.number}\`
+            5. Make changes and test: \`pytest tests/ -v\`
+            6. Commit with DCO: \`git commit -s -m "fix: description"\`
+            7. Push and create PR
+
+            **Need help?** Comment below or join our [Discord](https://discord.gg/xai-blockchain).`
+              });
+            }

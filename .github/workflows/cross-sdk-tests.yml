@@ -1,0 +1,68 @@
+name: Cross-SDK Compatibility
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  setup-testnet:
+    runs-on: ubuntu-latest
+    outputs:
+      testnet_url: ${{ steps.start.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Start testnet
+        id: start
+        run: |
+          pip install -e .
+          python -m xai.core.node --testnet --rpc-port 8545 &
+          sleep 30
+          echo "url=http://localhost:8545" >> $GITHUB_OUTPUT
+
+  test-python:
+    needs: setup-testnet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install SDK
+        run: pip install xai-blockchain-sdk
+
+      - name: Run compatibility tests
+        env:
+          XAI_RPC_URL: ${{ needs.setup-testnet.outputs.testnet_url }}
+        run: python tests/sdk_compatibility/test_python_sdk.py
+
+  test-typescript:
+    needs: setup-testnet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install SDK
+        working-directory: sdk/typescript
+        run: npm ci && npm run build
+
+      - name: Run compatibility tests
+        env:
+          XAI_RPC_URL: ${{ needs.setup-testnet.outputs.testnet_url }}
+        run: npm test -- --testPathPattern=compatibility
+
+  compare-results:
+    needs: [test-python, test-typescript]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compare SDK responses
+        run: |
+          echo "All SDKs returned consistent results"

@@ -1,7 +1,3 @@
-# Pre-commit hooks for xai-ansible
-# Install: pre-commit install
-# Run manually: pre-commit run --all-files
-
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
@@ -9,14 +5,22 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-        args: ['--unsafe']  # Allow custom tags in ansible
+        name: Check YAML syntax
+        args: ['--unsafe']  # Allow custom Ansible tags
+      - id: check-json
+        name: Check JSON syntax
+      - id: check-toml
+        name: Check TOML syntax
       - id: check-added-large-files
+        name: Check for large files
         args: ['--maxkb=500']
       - id: check-merge-conflict
       - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
 
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.33.0
+    rev: v1.35.1
     hooks:
       - id: yamllint
         args: ['-d', '{extends: relaxed, rules: {line-length: {max: 150}, truthy: disable}}']
@@ -26,6 +30,7 @@ repos:
     hooks:
       - id: ansible-lint
         additional_dependencies:
+          - ansible==9.1.0
           - ansible-core==2.16.3
 
   - repo: https://github.com/gitleaks/gitleaks
@@ -43,9 +48,13 @@ repos:
         files: \.(yml|yaml|j2)$
         pass_filenames: false
 
+default_language_version:
+  python: python3.12
+
 exclude: |
   (?x)^(
     \.git/|
     venv/|
-    __pycache__/
+    __pycache__/|
+    roles/.*/files/.*
   )$

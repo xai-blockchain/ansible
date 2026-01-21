@@ -1,0 +1,89 @@
+name: SDK Sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/xai/api/**'
+      - 'docs/api/openapi.yaml'
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api_changed: ${{ steps.detect.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect API changes
+        id: detect
+        run: |
+          if git diff HEAD~1 --name-only | grep -E '(api/|openapi)'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+  update-sdks:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api_changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sdk: [python, typescript, react-native]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check SDK needs update
+        id: check
+        run: |
+          echo "Checking ${{ matrix.sdk }} SDK..."
+          echo "needs_update=true" >> $GITHUB_OUTPUT
+
+      - name: Create update PR
+        if: steps.check.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "chore(${{ matrix.sdk }}): sync with API changes"
+          body: |
+            API changes detected. This PR updates the ${{ matrix.sdk }} SDK.
+
+            Changes:
+            - Updated models from OpenAPI spec
+            - Regenerated client code
+
+          branch: sdk-sync/${{ matrix.sdk }}
+          labels: sdk-update, automated
+
+  notify:
+    needs: [detect-changes, update-sdks]
+    if: needs.detect-changes.outputs.api_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create tracking issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🔄 API Changes Detected - SDK Review Required',
+              body: `## API Changes Detected
+
+            Commit: ${context.sha}
+
+            ### SDKs to Review
+            - [ ] Python SDK
+            - [ ] TypeScript SDK
+            - [ ] React Native SDK
+
+            ### Checklist
+            - [ ] Review generated PRs
+            - [ ] Test SDK changes locally
+            - [ ] Update version numbers
+            - [ ] Update changelogs
+            `,
+              labels: ['sdk-update', 'api-change']
+            });

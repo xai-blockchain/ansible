@@ -1,0 +1,103 @@
+name: Stale Management
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: Mark Stale Issues and PRs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Issue settings
+          stale-issue-message: |
+            This issue has been automatically marked as stale due to 60 days of inactivity.
+
+            It will be closed in 14 days if no further activity occurs.
+
+            **To keep this issue open:**
+            - Comment with an update on the status
+            - Add the `pinned` label if this is still important
+
+            If this issue is resolved or no longer relevant, please close it.
+          close-issue-message: |
+            This issue has been automatically closed due to extended inactivity.
+
+            If you believe this issue is still relevant, feel free to reopen it with additional context.
+          stale-issue-label: 'stale'
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+
+          # PR settings
+          stale-pr-message: |
+            This pull request has been automatically marked as stale due to 30 days of inactivity.
+
+            It will be closed in 14 days if no further activity occurs.
+
+            **To keep this PR open:**
+            - Rebase on the latest `main` branch
+            - Address any review comments
+            - Comment with an update on the status
+
+            If this PR is no longer needed, please close it.
+          close-pr-message: |
+            This pull request has been automatically closed due to extended inactivity.
+
+            If you'd like to continue this work, feel free to reopen or create a new PR.
+          stale-pr-label: 'stale'
+          days-before-pr-stale: 30
+          days-before-pr-close: 14
+
+          # Exemptions
+          exempt-issue-labels: 'pinned,security,bug,in-progress,blocked'
+          exempt-pr-labels: 'pinned,security,in-progress,blocked,do-not-close'
+          exempt-all-milestones: true
+
+          # Don't stale issues/PRs with recent activity
+          exempt-issue-assignees: true
+          exempt-pr-assignees: true
+
+          # Limits
+          operations-per-run: 100
+
+          # Labels to remove when issue/PR becomes active again
+          remove-stale-when-updated: true
+          remove-issue-stale-when-updated: true
+          remove-pr-stale-when-updated: true
+
+  cleanup-closed:
+    name: Cleanup Closed Issues
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // Remove stale label from closed issues (cleanup)
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              labels: 'stale',
+              per_page: 50
+            });
+
+            for (const issue of issues) {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  name: 'stale'
+                });
+                console.log(`Removed stale label from #${issue.number}`);
+              } catch (e) {
+                // Label might already be removed
+              }
+            }

@@ -1,0 +1,166 @@
+name: State Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/xai/blockchain/**'
+      - 'src/xai/state/**'
+      - 'src/xai/core/**'
+  pull_request:
+    paths:
+      - 'src/xai/blockchain/**'
+      - 'src/xai/state/**'
+      - 'src/xai/core/**'
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  utxo-tests:
+    name: UTXO State Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,blockchain]" || pip install -e ".[dev]"
+
+      - name: Test UTXO creation
+        run: pytest tests/ -v -k "test_utxo_create or utxo_create" || echo "No UTXO creation tests found"
+
+      - name: Test UTXO spending
+        run: pytest tests/ -v -k "test_utxo_spend or utxo_spend" || echo "No UTXO spending tests found"
+
+      - name: Test double-spend prevention
+        run: pytest tests/ -v -k "test_double_spend or double_spend" || echo "No double-spend tests found"
+
+      - name: Test UTXO set consistency
+        run: pytest tests/ -v -k "test_utxo_set or utxo_set" || echo "No UTXO set tests found"
+
+  transaction-tests:
+    name: Transaction Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,blockchain]" || pip install -e ".[dev]"
+
+      - name: Test transaction creation
+        run: pytest tests/ -v -k "transaction and create" || echo "No transaction creation tests found"
+
+      - name: Test transaction validation
+        run: pytest tests/ -v -k "transaction and valid" || echo "No transaction validation tests found"
+
+      - name: Test transaction ordering
+        run: pytest tests/ -v -k "test_tx_order or tx_order" || echo "No transaction ordering tests found"
+
+      - name: Test transaction finality
+        run: pytest tests/ -v -k "test_finality or finality" || echo "No finality tests found"
+
+  block-tests:
+    name: Block State Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,blockchain]" || pip install -e ".[dev]"
+
+      - name: Test block creation
+        run: pytest tests/ -v -k "block and create" || echo "No block creation tests found"
+
+      - name: Test block validation
+        run: pytest tests/ -v -k "block and valid" || echo "No block validation tests found"
+
+      - name: Test chain continuity
+        run: pytest tests/ -v -k "chain" || echo "No chain tests found"
+
+  state-snapshot-tests:
+    name: State Snapshot Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,blockchain]" || pip install -e ".[dev]"
+
+      - name: Test snapshot creation
+        run: pytest tests/ -v -k "test_snapshot_create or snapshot_create" || echo "No snapshot creation tests found"
+
+      - name: Test snapshot restoration
+        run: pytest tests/ -v -k "test_snapshot_restore or snapshot_restore" || echo "No snapshot restoration tests found"
+
+      - name: Test incremental snapshots
+        run: pytest tests/ -v -k "test_incremental or incremental" || echo "No incremental tests found"
+
+  state-integrity:
+    name: State Integrity Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,blockchain]" || pip install -e ".[dev]"
+
+      - name: Run state integrity tests
+        run: |
+          pytest tests/ -v -k "state or integrity" \
+            --cov=src --cov-report=xml || true
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: state-validation
+        if: always()

@@ -1,0 +1,44 @@
+name: API Fuzz (Schemathesis)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays 06:00 UTC
+  pull_request:
+    paths:
+      - "docs/api/openapi.yaml"
+      - "src/xai/core/**"
+      - "src/xai/core/api_routes/**"
+      - "src/xai/core/api_blueprints/**"
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+          pip install schemathesis pytest
+
+      - name: Start XAI test node
+        run: |
+          python -m xai.core.node --testnet --rpc-port 8545 --api-port 8545 &
+          sleep 25
+
+      - name: Run Schemathesis fuzzing
+        env:
+          BASE_URL: http://127.0.0.1:8545
+        run: |
+          schemathesis run docs/api/openapi.yaml \
+            --base-url "${BASE_URL}" \
+            --checks all \
+            --hypothesis-max-examples 50 \
+            --hypothesis-deadline 1000

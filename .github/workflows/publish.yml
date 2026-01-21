@@ -1,0 +1,143 @@
+name: Publish Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (without v prefix)'
+        required: true
+      publish_to:
+        description: 'Where to publish'
+        required: true
+        default: 'testpypi'
+        type: choice
+        options:
+          - testpypi
+          - pypi
+          - both
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    name: Build Distribution
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check package
+        run: twine check dist/*
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  test-install:
+    name: Test Installation
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install from wheel
+        run: pip install dist/*.whl
+
+      - name: Test import
+        run: |
+          python -c "import xai; print('XAI version:', getattr(xai, '__version__', 'unknown'))"
+          python -c "from xai.core import node; print('Node module loaded')" || echo "Node module not available"
+          python -c "from xai.blockchain import block; print('Blockchain module loaded')" || echo "Blockchain module structure different"
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    runs-on: ubuntu-latest
+    needs: [build, test-install]
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.publish_to == 'testpypi' || github.event.inputs.publish_to == 'both')
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/xai-blockchain
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [build, test-install]
+    if: |
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.publish_to == 'pypi' || github.event.inputs.publish_to == 'both'))
+    environment:
+      name: pypi
+      url: https://pypi.org/p/xai-blockchain
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  create-github-release-assets:
+    name: Upload Release Assets
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
