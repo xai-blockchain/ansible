@@ -10,7 +10,7 @@ ansible-playbook -i inventory/testnet.yml playbooks/health-check.yml
 ### Update Code (Rolling)
 ```bash
 # Deploy via Ansible (pulls latest from git)
-cd ~/blockchain-projects/xai-project/infra/ansible
+cd ~/blockchain-projects/xai-ansible
 ansible-playbook -i inventory/testnet.yml playbooks/update-code.yml
 ```
 
