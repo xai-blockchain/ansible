@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -137,7 +137,7 @@ jobs:
 
     steps:
       - name: Checkout XAI source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: xai-source
 
@@ -145,7 +145,7 @@ jobs:
       # SINGLE SOURCE OF TRUTH: Checkout xai-ansible for all deployment configs
       # =======================================================================
       - name: Checkout xai-ansible (deployment configs)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ env.ANSIBLE_REPO }}
           path: xai-ansible
