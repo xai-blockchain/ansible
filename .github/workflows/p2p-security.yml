@@ -63,7 +63,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload benchmark report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: crypto-benchmarks
           path: benchmarks/crypto_report.json
@@ -87,7 +87,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload dependency audit
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pip-audit
           path: pip-audit.json
@@ -106,7 +106,7 @@ jobs:
 
       - name: Upload DAST report
         if: env.DAST_TARGET_URL != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dast-zap
           path: |
