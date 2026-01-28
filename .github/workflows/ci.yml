@@ -105,7 +105,7 @@ jobs:
         run: twine check dist/*
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-packages
           path: dist/
@@ -157,7 +157,7 @@ jobs:
         run: python scripts/benchmark_tps.py --tx-count 100 --blocks 5 --lookups 1000 --output benchmark-results.json
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-results
           path: benchmark-results.json

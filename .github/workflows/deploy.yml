@@ -63,7 +63,7 @@ jobs:
               README.md
 
       - name: Upload deployment package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: xai-source-${{ github.sha }}
           path: dist/xai-source-${{ github.sha }}.tar.gz
@@ -118,7 +118,7 @@ jobs:
           fi
 
       - name: Upload Bandit results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: bandit-security-results
